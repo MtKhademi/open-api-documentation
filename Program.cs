@@ -13,7 +13,11 @@ var app = builder.Build();
 
 // use open api
 app.MapOpenApi();
-app.MapScalarApiReference();
+app.MapScalarApiReference(option =>
+{
+    option.ShowOperationId = true;
+    option.Theme = ScalarTheme.DeepSpace;
+});
 
 app.UseProductModule();
 

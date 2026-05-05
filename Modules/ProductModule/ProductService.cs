@@ -21,4 +21,33 @@ internal class ProductService
         _logger.LogWarning("GET ALL PRODUCTS");
         return _products;
     }
+
+    public Product? FindById(int productId) => _products.Find(p => p.Id == productId);
+    public bool DeleteById(int productId)
+    {
+        var product = FindById(productId);
+        if (product is null) return false;
+
+        _products.Remove(product);
+
+        return true;
+    }
+
+    public bool Update(int productId, Product prodcutForUpdate)
+    {
+        var product = FindById(productId);
+        if (product is null) return false;
+
+        product.Name = prodcutForUpdate.Name;
+        product.Price = prodcutForUpdate.Price;
+
+        return true;
+    }
+
+    public bool Create(Product prodcutForUpdate)
+    {
+        prodcutForUpdate.Id = _products.OrderByDescending(x => x.Id).First().Id + 1;
+        _products.Add(prodcutForUpdate);
+        return true;
+    }
 }
