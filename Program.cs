@@ -1,15 +1,16 @@
+using Scalar.AspNetCore;
+
 var builder = WebApplication.CreateBuilder(args);
 
 
 // add openapi service
 builder.Services.AddOpenApi();
 
-
-
 var app = builder.Build();
 
 // use open api
 app.MapOpenApi();
+app.MapScalarApiReference();
 
 var summaries = new[]
 {
