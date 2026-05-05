@@ -55,6 +55,10 @@ TemporaryDependencyNodeTargetIdentifier=net10.0
 /warnaserror+:NU1605,SYSLIB0011
 
 [sourceFiles]
+Modules/ProductModule/
+ Product.cs
+ ProductModule.cs
+ ProductService.cs
 obj/Debug/net10.0/
  ..AssemblyInfo.cs
  ..GlobalUsings.g.cs
