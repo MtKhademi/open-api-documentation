@@ -21,7 +21,7 @@ ProjectAssetsFile=<PATH>obj/project.assets.json
 RootNamespace=_
 RunAnalyzers=
 RunAnalyzersDuringLiveAnalysis=
-SolutionPath=*Undefined*
+SolutionPath=<PATH>open-api-documentation.sln
 TargetFrameworkIdentifier=.NETCoreApp
 TargetPath=<PATH>bin/Debug/net10.0/..dll
 TargetRefPath=<PATH>obj/Debug/net10.0/ref/..dll
@@ -55,10 +55,19 @@ TemporaryDependencyNodeTargetIdentifier=net10.0
 /warnaserror+:NU1605,SYSLIB0011
 
 [sourceFiles]
-Modules/ProductModule/
- Product.cs
- ProductModule.cs
- ProductService.cs
+Common/
+ ApiDocumentTransferExtensions.cs
+ DocumentInclusionTransformer.cs
+ OpenApiDocumentNameMetadata.cs
+Modules/IAM/Features/
+ LoginEndpoints.cs
+ RegisterEndPoints.cs
+Modules/
+ IAM/IAMModule.cs
+ ProductModule/
+  Product.cs
+  ProductModule.cs
+  ProductService.cs
 obj/Debug/net10.0/
  ..AssemblyInfo.cs
  ..GlobalUsings.g.cs
