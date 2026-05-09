@@ -15,18 +15,56 @@ public static class ProductModule
     public static WebApplication UseProductModule(this WebApplication app)
     {
 
-        app.MapGet("/api/products", ([FromServices] ProductService service) => service.GetAll())
+        app.MapGet("/api/products", ([FromServices] ProductService service) =>
+        {
+            return Results.Ok(service.GetAll());
+        })
         .WithSummary("Get all products")
         .WithDescription("with this api ypu can get all productas")
         .WithName("GetAllProducts")
-        .WithTags("Products");
+        .WithTags("Products")
+        .Produces<List<Product>>(StatusCodes.Status200OK)
+        .ProducesProblem(StatusCodes.Status500InternalServerError);
+        // .Produces<ApiResult>(StatusCodes.Status500InternalServerError);
+
 
         app.MapGet("/api/products/{id:int}", (int id, [FromServices] ProductService service) =>
         {
-            service.FindById(id);
+
+            if (id <= 0)
+            {
+                var validationProblem = new HttpValidationProblemDetails();
+                validationProblem.Errors.Add(nameof(id), [
+                    $"{nameof(id)} can not be zero.",
+                    $"{nameof(id)} can be negative."
+                ]);
+
+                return Results.BadRequest(validationProblem);
+            }
+
+
+            var entity = service.FindById(id);
+            if (entity is null)
+            {
+                var problemDetails = new ProblemDetails
+                {
+                    Status = StatusCodes.Status404NotFound,
+                    Title = "Not found this product",
+                    Detail = $"Not found such as product with id : {id}",
+                    Type = "/api/product/id/not-found"
+                };
+
+                return Results.NotFound(problemDetails);
+            }
+            return Results.Ok(entity);
+
         }).WithSummary("Get specific product by id")
         .WithName("GetProductById")
-        .WithTags("Products");
+        .WithTags("Products")
+        .Produces<Product>(StatusCodes.Status200OK)
+        .ProducesProblem(StatusCodes.Status404NotFound)
+        .ProducesProblem(StatusCodes.Status500InternalServerError)
+        .ProducesValidationProblem(StatusCodes.Status400BadRequest);
 
 
         app.MapDelete("/api/products/{id:int}", (int id, [FromServices] ProductService service) =>
@@ -53,4 +91,11 @@ public static class ProductModule
 
     }
 
+}
+
+
+internal class ApiResult
+{
+    public bool IsSuccess { get; set; }
+    public string? Message { get; set; }
 }
