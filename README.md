@@ -25,3 +25,5 @@
 GET /api/products
 GET /api/products/1
 DELETE /api/products/1
+```
+
