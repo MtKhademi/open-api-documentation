@@ -1,6 +1,3 @@
-using Microsoft.AspNetCore.Mvc;
-using Microsoft.OpenApi;
-
 namespace Modules.IAM;
 
 public static class IAMModule
@@ -17,7 +14,8 @@ public static class IAMModule
                 version: "v1",
                 description: "Identity and Access Management module - version 1"));
 
-            options.AddDocumentTransformer(new DocumentInclusionTransformer(V1DocumentName));
+            options.AddDocumentTransformer(
+                new PathPrefixDocumentInclusionTransformer("/api/iam/v1"));
         });
 
         services.AddOpenApi(V2DocumentName, options =>
@@ -27,31 +25,8 @@ public static class IAMModule
                 version: "v2",
                 description: "Identity and Access Management module - version 2"));
 
-            options.AddDocumentTransformer(new DocumentInclusionTransformer(V2DocumentName));
-        });
-
-        services.AddOpenApi(options =>
-        {
-            options.AddOperationTransformer(async (operation, context, cancellationToken) =>
-            {
-                // Generate schema for error responses
-                var errorSchema = await context.GetOrCreateSchemaAsync(typeof(ProblemDetails), null, cancellationToken);
-                context.Document?.AddComponent("Error", errorSchema);
-
-                operation.Responses ??= new OpenApiResponses();
-                // Add a "4XX" response to the operation with the newly created schema
-                operation.Responses["4XX"] = new OpenApiResponse
-                {
-                    Description = "Bad Request",
-                    Content = new Dictionary<string, OpenApiMediaType>
-                    {
-                        ["application/problem+json"] = new OpenApiMediaType
-                        {
-                            Schema = new OpenApiSchemaReference("Error", context.Document)
-                        }
-                    }
-                };
-            });
+            options.AddDocumentTransformer(
+                new PathPrefixDocumentInclusionTransformer("/api/iam/v2"));
         });
 
         return services;
@@ -59,47 +34,61 @@ public static class IAMModule
 
     public static WebApplication UseIAMModule(this WebApplication app)
     {
-        var iamGroup = app.MapGroup("/api/iam").WithTags("IAM");
+        var v1 = app.MapGroup("/api/iam/v1")
+            .WithTags("IAM");
 
-        iamGroup.MapPost("/v1/login", () =>
+        v1.MapPost("/login", () =>
         {
-            return Results.Ok(new { Message = "IAM v1 login" });
+            return Results.Ok(new
+            {
+                Message = "IAM v1 login successful"
+            });
         })
-        .WithSummary("Login in system")
-        .WithDescription("Returns IAM login result for version 1.")
-        .WithTags("IAM")
-        .WithName("LoginV1")
-        .WithDocumentName(V1DocumentName);
+        .WithName("IAM_Login_V1")
+        .WithSummary("Login in IAM v1")
+        .WithDescription("Authenticates a user in IAM module version 1.")
+        .Produces(StatusCodes.Status200OK);
 
-        iamGroup.MapPost("/v2/login", () =>
+        v1.MapPost("/register", () =>
         {
-            return Results.Ok(new { Message = "IAM v2 login" });
+            return Results.Ok(new
+            {
+                Message = "IAM v1 register successful"
+            });
         })
-        .WithSummary("Login in system")
-        .WithDescription("Returns IAM login result for version 2.")
-        .WithTags("IAM")
-        .WithName("LoginV2")
-        .WithDocumentName(V2DocumentName);
+        .WithName("IAM_Register_V1")
+        .WithSummary("Register in IAM v1")
+        .WithDescription("Registers a user in IAM module version 1.")
+        .Produces(StatusCodes.Status200OK);
 
-        iamGroup.MapPost("/v1/register", () =>
-        {
-            return Results.Ok(new { Message = "IAM v1 register" });
-        })
-        .WithSummary("Register in system")
-        .WithDescription("Registers a user for version 1.")
-        .WithTags("IAM")
-        .WithName("RegisterV1")
-        .WithDocumentName(V1DocumentName);
+        var v2 = app.MapGroup("/api/iam/v2")
+            .WithTags("IAM");
 
-        iamGroup.MapPost("/v2/register", () =>
+        v2.MapPost("/login", () =>
         {
-            return Results.Ok(new { Message = "IAM v2 register" });
+            return Results.Ok(new
+            {
+                Message = "IAM v2 login successful",
+                TokenType = "Bearer"
+            });
         })
-        .WithSummary("Register in system")
-        .WithDescription("Registers a user for version 2.")
-        .WithTags("IAM")
-        .WithName("RegisterV2")
-        .WithDocumentName(V2DocumentName);
+        .WithName("IAM_Login_V2")
+        .WithSummary("Login in IAM v2")
+        .WithDescription("Authenticates a user in IAM module version 2.")
+        .Produces(StatusCodes.Status200OK);
+
+        v2.MapPost("/register", () =>
+        {
+            return Results.Ok(new
+            {
+                Message = "IAM v2 register successful",
+                RequiresEmailConfirmation = true
+            });
+        })
+        .WithName("IAM_Register_V2")
+        .WithSummary("Register in IAM v2")
+        .WithDescription("Registers a user in IAM module version 2.")
+        .Produces(StatusCodes.Status200OK);
 
         return app;
     }

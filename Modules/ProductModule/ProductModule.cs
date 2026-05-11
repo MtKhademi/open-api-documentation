@@ -1,23 +1,25 @@
 using Microsoft.AspNetCore.Mvc;
+using Modules.ProductModule;
 
-namespace Modules.ProductModule;
+namespace Modules.Products;
 
 public static class ProductModule
 {
-    public const string DocumentName = "products-v1";
+    public const string V1DocumentName = "products-v1";
 
     public static IServiceCollection AddProductModule(this IServiceCollection services)
     {
-        services.AddScoped<ProductService>();
+        services.AddSingleton<ProductService>();
 
-        services.AddOpenApi(DocumentName, options =>
+        services.AddOpenApi(V1DocumentName, options =>
         {
             options.AddDocumentTransformer(new ModuleInfoDocumentTransformer(
                 title: "Products API",
                 version: "v1",
                 description: "Products module - version 1"));
 
-            options.AddDocumentTransformer(new DocumentInclusionTransformer(DocumentName));
+            options.AddDocumentTransformer(
+                new PathPrefixDocumentInclusionTransformer("/api/products/v1"));
         });
 
         return services;
@@ -25,86 +27,50 @@ public static class ProductModule
 
     public static WebApplication UseProductModule(this WebApplication app)
     {
-        app.MapGet("/api/products", ([FromServices] ProductService service) =>
+        var v1 = app.MapGroup("/api/products/v1")
+            .WithTags("Products");
+
+        v1.MapGet("/", ([FromServices] ProductService service) =>
         {
             return Results.Ok(service.GetAll());
         })
+        .WithName("Products_GetAll_V1")
         .WithSummary("Get all products")
-        .WithTags("Products")
-        .Produces<List<Product>>(StatusCodes.Status200OK)
-        .ProducesProblem(StatusCodes.Status500InternalServerError)
-        .WithDocumentName(DocumentName);
+        .WithDescription("Returns all products in Products module version 1.")
+        .Produces<List<Product>>(StatusCodes.Status200OK);
 
-        app.MapGet("/api/products/{id:int}", (int id, [FromServices] ProductService service) =>
+        v1.MapGet("/{id:int}", (int id, [FromServices] ProductService service) =>
         {
-            if (id <= 0)
-            {
-                var validationProblem = new HttpValidationProblemDetails();
-                validationProblem.Errors.Add(nameof(id),
-                [
-                    $"{nameof(id)} can not be zero.",
-                    $"{nameof(id)} can not be negative."
-                ]);
+            var product = service.FindById(id);
 
-                return Results.BadRequest(validationProblem);
-            }
-
-            var entity = service.FindById(id);
-            if (entity is null)
+            if (product is null)
             {
-                var problemDetails = new ProblemDetails
+                return Results.NotFound(new ProblemDetails
                 {
-                    Status = StatusCodes.Status404NotFound,
                     Title = "Product not found",
-                    Detail = $"No product found with id: {id}",
-                    Type = "/api/products/id/not-found"
-                };
-
-                return Results.NotFound(problemDetails);
+                    Detail = $"No product found with id {id}",
+                    Status = StatusCodes.Status404NotFound,
+                    Type = "/problems/product-not-found"
+                });
             }
 
-            return Results.Ok(entity);
+            return Results.Ok(product);
         })
-        .WithSummary("Get specific product by id")
-        .WithTags("Products")
+        .WithName("Products_GetById_V1")
+        .WithSummary("Get product by id")
+        .WithDescription("Returns one product by id in Products module version 1.")
         .Produces<Product>(StatusCodes.Status200OK)
-        .ProducesProblem(StatusCodes.Status404NotFound)
-        .ProducesProblem(StatusCodes.Status500InternalServerError)
-        .ProducesValidationProblem(StatusCodes.Status400BadRequest)
-        .WithDocumentName(DocumentName);
+        .ProducesProblem(StatusCodes.Status404NotFound);
 
-        app.MapPost("/api/products", ([FromBody] Product product, [FromServices] ProductService service) =>
+        v1.MapPost("/", ([FromBody] Product product, [FromServices] ProductService service) =>
         {
             service.Create(product);
-            return Results.Created($"/api/products/{product.Id}", product);
+            return Results.Created($"/api/products/v1/{product.Id}", product);
         })
-        .WithSummary("Create a new product")
-        .WithTags("Products")
-        .Produces<Product>(StatusCodes.Status201Created)
-        .ProducesProblem(StatusCodes.Status500InternalServerError)
-        .WithDocumentName(DocumentName);
-
-        app.MapPut("/api/products/{id:int}", (int id, [FromBody] Product product, [FromServices] ProductService service) =>
-        {
-            service.Update(id, product);
-            return Results.NoContent();
-        })
-        .WithSummary("Update a product")
-        .WithTags("Products")
-        .Produces(StatusCodes.Status204NoContent)
-        .ProducesProblem(StatusCodes.Status500InternalServerError)
-        .WithDocumentName(DocumentName);
-
-        app.MapDelete("/api/products/{id:int}", (int id, [FromServices] ProductService service) =>
-        {
-            service.DeleteById(id);
-            return Results.NoContent();
-        })
-        .WithSummary("Delete a product")
-        .WithTags("Products")
-        .Produces(StatusCodes.Status204NoContent)
-        .ProducesProblem(StatusCodes.Status500InternalServerError)
-        .WithDocumentName(DocumentName);
+        .WithName("Products_Create_V1")
+        .WithSummary("Create product")
+        .WithDescription("Creates a product in Products module version 1.")
+        .Produces<Product>(StatusCodes.Status201Created);
 
         return app;
     }
